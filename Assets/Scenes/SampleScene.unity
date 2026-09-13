@@ -145,7 +145,7 @@ Transform:
   m_GameObject: {fileID: 63365210}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 959.4241, y: 542.9533, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -166,6 +166,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PieceManager
   _piecePrefab: {fileID: 8839440221454628585, guid: 004edc3b07ae45c458fdb4e25968ef47, type: 3}
   _currentPiece: {fileID: 0}
+  _initPiecePosition: {x: 2, y: 3}
+  _fallInterval: 1.5
 --- !u!1 &363219871
 GameObject:
   m_ObjectHideFlags: 0
@@ -1097,6 +1099,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 09277e2ec05feb246914c76d25608814, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::GridManager
+  _cellSize: 0.6666667
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

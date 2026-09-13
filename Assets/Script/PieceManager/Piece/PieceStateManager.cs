@@ -17,12 +17,13 @@ public class PieceStateManager : MonoBehaviour
     // ==================================================
     // ----- Propaty -----
     // ==================================================
-    private PieceManager _pieceManager;
+    [SerializeField] private Vector2Int _gridPosition; // 現在の論理位置
+    private Coroutine _moveCoroutine;
 
     // ==================================================
     // ----- Public Propaty -----
     // ==================================================
-    public PieceManager PieceManager { get; set; }
+    public Vector2Int GridPosition { get => _gridPosition; set => _gridPosition = value; }
 
 
     // ==================================================
@@ -34,19 +35,22 @@ public class PieceStateManager : MonoBehaviour
         Drop, // 落下中
         Stay, // 待ち
     }
-    [SerializeField] private PieceState _state = PieceState.Drop;
+    [SerializeField] private PieceState _currentState = PieceState.Drop;
 
     // ==================================================
     // ----- Unity Event -----
     // ==================================================
+    private void Start()
+    {
+
+    }
     private void Update()
     {
-        switch (_state)
+        switch (_currentState)
         {
             case PieceState.None:
                 break;
             case PieceState.Drop:
-                Drop();
                 break;
             case PieceState.Stay:
                 break;
@@ -56,9 +60,16 @@ public class PieceStateManager : MonoBehaviour
     // ==================================================
     // ----- Public Event -----
     // ==================================================
-    public void TryMove(float moveXDirection)
+    public void MoveTo(Vector2Int targetGridPosition, Vector3 targetWorldPosition)
     {
-        StartCoroutine(Move(moveXDirection));
+        _gridPosition = targetGridPosition;
+
+        if (_moveCoroutine != null)
+        {
+            StopCoroutine(_moveCoroutine);
+        }
+
+        _moveCoroutine = StartCoroutine(MoveCoroutine(targetWorldPosition));
     }
     public void TryHardDrop()
     {
@@ -70,36 +81,65 @@ public class PieceStateManager : MonoBehaviour
     }
 
     // ==================================================
-    // ----- Drop -----
-    // ==================================================
-    private void Drop()
-    {
-        // 落下処理
-        Vector2 position = transform.position;
-        position.y += Time.deltaTime * -2.0f;
-        transform.position = position;
-    }
-
-    // ==================================================
     // ----- Move -----
     // ==================================================
-    private IEnumerator Move(float moveXDirection)
+    private IEnumerator MoveCoroutine(Vector3 targetPosition)
     {
+        Vector3 startPosition = transform.position;
+        float duration = 0.1f;
         float elapsedTime = 0.0f;
-        while (elapsedTime <= 0.5f)
+
+        while (elapsedTime <= duration)
         {
             // 時間経過
             elapsedTime += Time.deltaTime;
 
+            // 遷移
+            float t = Mathf.Clamp01(elapsedTime / duration);
+
             // 左右移動
-            Vector2 position = transform.position;
-            position.x += Time.deltaTime * 1.0f * moveXDirection;
-            transform.position = position;
+            transform.position = Vector3.Lerp(startPosition, targetPosition, t);
 
             yield return null;
         }
+        transform.position = targetPosition;
 
-        yield break;
+        _moveCoroutine = null;
+    }
+
+    // ==================================================
+    // ----- ChangeState -----
+    // ==================================================
+    public void ChangeState(PieceState newState)
+    {
+        if (_currentState == newState)
+        {
+            return;
+        }
+
+        // 終了処理
+        switch (_currentState)
+        {
+            case PieceState.None:
+                break;
+            case PieceState.Drop:
+                break;
+            case PieceState.Stay:
+                break;
+        }
+
+        _currentState = newState;
+
+        // 開始処理
+        switch (_currentState)
+        {
+            case PieceState.None:
+                break;
+            case PieceState.Drop:
+                break;
+            case PieceState.Stay:
+                break;
+        }
     }
 
 
