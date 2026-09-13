@@ -62,7 +62,6 @@ public class GridManager : MonoBehaviour
                 break;
         }
         Vector2Int moveTo = currentGridPosition + dir;
-        Debug.Log("moveTo: " + moveTo);
         if (moveTo.x > _gridColumns - 1 || moveTo.x < 0 || moveTo.y > _gridRows - 1 || moveTo.y < 0)
         {
             return false;
@@ -84,5 +83,18 @@ public class GridManager : MonoBehaviour
         return _gridOrigin + new Vector3(x, y, 0.0f);
     }
 
+    public void RegisterPiece(PieceStateManager piece)
+    {
+        int x = piece.GridPosition.x;
+        int y = piece.GridPosition.y;
+
+        if (_pieces[x, y] != null)
+        {
+            Debug.LogError("[Error] PIECE is already exist!");
+        }
+
+        _pieces[x, y] = piece;
+
+    }
 
 }

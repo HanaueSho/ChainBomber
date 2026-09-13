@@ -22,7 +22,8 @@ public class PieceManager : MonoBehaviour
     [SerializeField] private InputAction_Piece _inputAction;
 
     [Header("操作対象のピース参照")]
-    [SerializeField] private PieceStateManager _currentPiece;
+    [SerializeField] private PieceStateManager _currentPieceUpper; // 上側
+    [SerializeField] private PieceStateManager _currentPieceLower; // 下側
 
     [Header("ピースの初期位置")]
     [SerializeField] private Vector2Int _initPiecePosition = new Vector2Int(2, 9);
@@ -41,6 +42,13 @@ public class PieceManager : MonoBehaviour
     private float _dropElapsedTime = 0.0f;
     private bool _isQuickDrop;
 
+    // ==================================================
+    // ----- LockDelay Propaty -----
+    // ==================================================
+    [SerializeField] private float _lockDelayTime = 0.5f;
+    [SerializeField] private float _lockDelayTimeQuick = 0.1f;
+    private float _lockElapsedTime = 0.0f;
+    private bool _isGrounded = false;
 
     // ==================================================
     // ----- Unity Events -----
@@ -63,12 +71,15 @@ public class PieceManager : MonoBehaviour
     }
     private void Update()
     {
-        // ----- 自由落下指示 -----
+        // ----- 入力受けつけ -----
         UpdateQuickDrop();
+        InputAction();
+
+        // ----- 自由落下 -----
         UpdateDropPieceTime();
 
-        // ----- 入力受けつけ -----
-        InputAction();
+        // ----- 着地固定判定 -----
+        UpdateLockDelay();
     }
 
     // ==================================================
@@ -108,10 +119,65 @@ public class PieceManager : MonoBehaviour
     }
     private void TryDropPiece()
     {
-        if (_gridManager.CanMoveTo(PieceMoveDirection.Down, _currentPiece.GridPosition))
+        if (_gridManager.CanMoveTo(PieceMoveDirection.Down, _currentPieceLower.GridPosition))
         {
-            Vector2Int targetGridPosition = _currentPiece.GridPosition + new Vector2Int(0, -1);
-            _currentPiece.MoveTo(targetGridPosition, _gridManager.GridToWorld(targetGridPosition));
+            MoveCurrentPieces(Vector2Int.down);
+            _isGrounded = false;
+            _lockElapsedTime = 0.0f;
+        }
+        else
+        {
+            _isGrounded = true;
+            _dropElapsedTime = 0.0f;
+        }
+    }
+
+    // ==================================================
+    // ----- Lock Piece -----
+    // 設置時にピースを固定する猶予
+    // ==================================================
+    private void UpdateLockDelay()
+    {
+        if (!_isGrounded)
+        {
+            return;
+        }
+
+        _lockElapsedTime += Time.deltaTime;
+
+        float currentLockDelay = _isQuickDrop ? _lockDelayTimeQuick : _lockDelayTime;
+
+        if (_lockElapsedTime >= currentLockDelay)
+        {
+            LockCurrentPiece();
+        }
+    }
+    private void LockCurrentPiece()
+    {
+        _gridManager.RegisterPiece(_currentPieceUpper);
+        _gridManager.RegisterPiece(_currentPieceLower);
+
+        _currentPieceUpper = null;
+        _currentPieceLower = null;
+
+        _isGrounded = false;
+        _lockElapsedTime = 0.0f;
+        _dropElapsedTime = 0.0f;
+
+        CreatePiece();
+    }
+    private void UpdateGroundedState()
+    {
+        bool canDrop = _gridManager.CanMoveTo(PieceMoveDirection.Down, _currentPieceLower.GridPosition);
+
+        if (canDrop)
+        {
+            _isGrounded = false;
+            _lockElapsedTime = 0.0f;
+        }
+        else
+        {
+            _isGrounded = true;
         }
     }
 
@@ -124,19 +190,21 @@ public class PieceManager : MonoBehaviour
         if (_inputAction.Piece.MoveLeft.WasPressedThisFrame())
         {
             Debug.Log("左移動");
-            if (_gridManager.CanMoveTo(PieceMoveDirection.Left, _currentPiece.GridPosition))
+            if (_gridManager.CanMoveTo(PieceMoveDirection.Left, _currentPieceLower.GridPosition))
             {
-                Vector2Int targetGridPosition = _currentPiece.GridPosition + new Vector2Int(-1, 0);
-                _currentPiece.MoveTo(targetGridPosition, _gridManager.GridToWorld(targetGridPosition));
+                MoveCurrentPieces(Vector2Int.left);
+                _lockElapsedTime = 0.0f;
+                UpdateGroundedState();
             }
         }
         if (_inputAction.Piece.MoveRight.WasPressedThisFrame())
         {
             Debug.Log("右移動");
-            if (_gridManager.CanMoveTo(PieceMoveDirection.Right, _currentPiece.GridPosition))
+            if (_gridManager.CanMoveTo(PieceMoveDirection.Right, _currentPieceLower.GridPosition))
             {
-                Vector2Int targetGridPosition = _currentPiece.GridPosition + new Vector2Int(1, 0);
-                _currentPiece.MoveTo(targetGridPosition, _gridManager.GridToWorld(targetGridPosition));
+                MoveCurrentPieces(Vector2Int.right);
+                _lockElapsedTime = 0.0f;
+                UpdateGroundedState();
             }
         }
         if (_inputAction.Piece.HardDrop.WasPressedThisFrame())
@@ -144,17 +212,36 @@ public class PieceManager : MonoBehaviour
             Debug.Log("ハード");
         }
     }
+    private void MoveCurrentPieces(Vector2Int direction)
+    {
+        Vector2Int targetGridPositionUpper = _currentPieceUpper.GridPosition + direction;
+        Vector2Int targetGridPositionLower = _currentPieceLower.GridPosition + direction;
+        _currentPieceUpper.MoveTo(targetGridPositionUpper, _gridManager.GridToWorld(targetGridPositionUpper));
+        _currentPieceLower.MoveTo(targetGridPositionLower, _gridManager.GridToWorld(targetGridPositionLower));
+    }
 
     // ==================================================
     // ----- Create Piece -----
     // ==================================================
     private void CreatePiece()
     {
-        GameObject clone = Instantiate(_piecePrefab);
-        _currentPiece = clone.GetComponent<PieceStateManager>();
-        clone.transform.SetParent(transform);
-        clone.transform.position = _gridManager.GridToWorld(_initPiecePosition);
-        _currentPiece.GridPosition = _initPiecePosition;
+        { // Upper
+            GameObject clone = Instantiate(_piecePrefab);
+            _currentPieceUpper = clone.GetComponent<PieceStateManager>();
+            clone.transform.SetParent(transform);
+
+            Vector2Int gridPos = _initPiecePosition + new Vector2Int(0, 1);
+            clone.transform.position = _gridManager.GridToWorld(gridPos);
+            _currentPieceUpper.GridPosition = gridPos;
+        }
+        { // Lower
+            GameObject clone = Instantiate(_piecePrefab);
+            _currentPieceLower = clone.GetComponent<PieceStateManager>();
+            clone.transform.SetParent(transform);
+            clone.transform.position = _gridManager.GridToWorld(_initPiecePosition);
+            _currentPieceLower.GridPosition = _initPiecePosition;
+
+        }
     }
 
 }

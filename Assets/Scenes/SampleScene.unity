@@ -166,8 +166,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: Assembly-CSharp::PieceManager
   _piecePrefab: {fileID: 8839440221454628585, guid: 004edc3b07ae45c458fdb4e25968ef47, type: 3}
   _currentPiece: {fileID: 0}
-  _initPiecePosition: {x: 2, y: 3}
-  _fallInterval: 1.5
+  _initPiecePosition: {x: 2, y: 14}
+  _dropInterval: 1.5
+  _dropIntervalQuick: 0.1
+  _lockDelayTime: 0.5
 --- !u!1 &363219871
 GameObject:
   m_ObjectHideFlags: 0
